@@ -103,6 +103,13 @@
   .overlayCard h2 { margin-top: 0; color: #4a2c14; }
   .overlayCard .choices { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
   .overlayCard ul { text-align: left; line-height: 1.6; }
+  .splash { max-width: 620px; text-align: left; }
+  .splash h2, .splash .tagline { text-align: center; }
+  .splash h3 { color: #4a2c14; margin: 16px 0 4px; font-size: 17px; }
+  .splash p { line-height: 1.6; margin: 6px 0; }
+  .splash ul { margin: 4px 0; padding-left: 20px; }
+  .splash ul li { margin-bottom: 4px; }
+  .splash .bigPlay { display: block; margin: 18px auto 4px; }
   .bigPlay { font-size: 20px !important; padding: 12px 34px !important; }
   .small { text-align: center; font-size: 13px; color: #6b5b3e; margin-top: 10px; }
   .credit { text-align: center; font-size: 12px; color: #8a7a5c; margin-top: 6px; }
@@ -146,6 +153,7 @@
     <button id="buyMilker">Better Milker — 100 Milk</button>
     <button id="buyCow">Add a Cow — 150 Milk</button>
     <button id="feedHerd">Feed the Herd — 40 Milk</button>
+    <button id="petButton">🤲 Pet Gwendolyn (+Rating, calms the herd)</button>
   </div>
 
   <div id="log" aria-live="polite"></div>
@@ -154,15 +162,29 @@
 </div>
 
 <div class="overlay show" id="startBox">
-  <div class="overlayCard">
+  <div class="overlayCard splash">
     <h2>🐄 Moo Rating</h2>
-    <p><i>Milk the herd. Mind the mood. Gwendolyn is watching.</i></p>
+    <p class="tagline"><i>Milk the herd. Mind the mood. Gwendolyn is watching.</i></p>
+
+    <h3>📖 The story</h3>
+    <p>Gwendolyn is the queen of the herd — a black-and-white cow with a red bow, a long memory, and strong opinions about how she likes to be milked. The season is ending, and the farm needs <b>5,000 Milk</b> before the sun sets on the last day. The herd will give it to you… if you treat them right. Rush them, ignore them, or squeeze them dry, and they will revolt. Gwendolyn always remembers.</p>
+
+    <h3>📏 The rules</h3>
     <ul>
-      <li><b>Click a cow</b> (or press Space) to milk it.</li>
-      <li><b>Slower is better:</b> more than 4 clicks a second stresses the herd, drops the Moo Rating, and the cows remember.</li>
-      <li><b>Spend Milk</b> on a better milker, more cows, and feeding the herd.</li>
-      <li><b>Every 45 seconds</b> the herd forces a choice: appease, ignore, or exploit.</li>
-      <li><b>Reach 5,000 total Milk</b> to see your ending — Pastoral, Gigafarm, or somewhere in between.</li>
+      <li><b>Click a cow</b> to milk it. Every click earns Milk.</li>
+      <li><b>Slow hands win:</b> more than 4 clicks a second stresses the herd, drops the Moo Rating, and the cows remember — a stressed herd gives less Milk per click.</li>
+      <li><b>Rating 0 means revolt.</b> The herd refuses to be milked until you feed them.</li>
+      <li><b>Every 45 seconds</b> the herd forces a choice: appease (costs 50 Milk), ignore (hurts the rating, angers Gwendolyn), or exploit (+100 Milk, hurts the rating).</li>
+      <li><b>At 5,000 total Milk</b> the season ends. Rating 75+ is the Pastoral ending, 35 or less is the Gigafarm ending, and anything between is a Balanced Farm.</li>
+    </ul>
+
+    <h3>🧰 What to do</h3>
+    <ul>
+      <li><b>Click / tap a cow</b> or press <b>Space</b> to milk. <b>P</b> pauses, and the buttons up top mute or set the volume.</li>
+      <li><b>Follow the beat:</b> a golden ring pulses around Gwendolyn — click right on the beat for double Milk.</li>
+      <li><b>Pet Gwendolyn:</b> press and hold her, or use the Pet button. Petting raises the rating and makes the herd forget being rushed.</li>
+      <li><b>Watch for the golden cow:</b> she wanders in now and then for 10 seconds, and every click on her is worth 10x.</li>
+      <li><b>Spend Milk</b> on a better milker, more cows, and feeding the herd. A fed herd is a happy herd.</li>
     </ul>
     <button id="playButton" class="bigPlay">▶ Start milking</button>
     <p class="small">Tip: feed the herd when the Moo Rating falls — a calm herd milks better.</p>

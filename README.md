@@ -11,6 +11,9 @@ A cow clicker about milking a herd until it revolts. Click a cow to make Milk. C
 - **Click a cow** (or press Space) to milk it. Each click earns Milk based on your milker level and herd size. Watch the milk stream arc into the bucket — the bucket fills with the Milk on hand.
 - **Clicking faster than 4 times a second** stresses the herd: the Moo Rating drops, the cows shake, and a memory counter builds up. A stressed herd gives less Milk per click. Slow down, or feed the herd to make them forget.
 - **Keep a steady streak** — calm, even clicking builds your streak. Gwendolyn approves.
+- **Follow the beat** — a golden ring pulses around Gwendolyn. Click right on the beat and that click pays double Milk.
+- **Pet Gwendolyn** — press and hold her, or use the Pet button in the shop. Petting raises the Moo Rating by 1 every half-second and makes the herd forget being rushed. She needs a short rest between sessions.
+- **The golden cow** — every minute or two a golden cow wanders into the field for 10 seconds. Every click on her is worth 10x Milk. Don't miss her.
 - **The farm is alive:** Gwendolyn grazes, blinks, and moos to herself, butterflies drift by, birds cross the sky, and the day warms toward sunset as you near 5,000 Milk.
 - **Milestones** pop up every 1,000 total Milk, with a golden burst and a fanfare.
 - **Buy upgrades** with Milk:
@@ -34,7 +37,7 @@ At **5,000 total Milk** the game ends. Which ending you get depends on the Moo R
 
 ## How to run
 
-Play it in your browser at **[vivekn4.github.io/moo-rating](https://vivekn4.github.io/moo-rating/)**, or run it locally:
+Play it in your browser at **[vivekn4.github.io/moo-rating](https://vivekn4.github.io/moo-rating/)** — a splash screen tells the story, the rules, and what to do before you start — or run it locally:
 
 ```bash
 python3 -m http.server

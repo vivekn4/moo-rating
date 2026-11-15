@@ -15,6 +15,12 @@
   var MILK_GOAL = 5000;
   var EVENT_INTERVAL = 45;
   var FAST_CLICK_LIMIT = 4; // clicks per second before the herd stresses
+  var BEAT_PERIOD = 900; // ms between rhythm beats
+  var BEAT_WINDOW = 150; // ms either side of a beat that counts as on-beat
+  var GOLDEN_MULT = 10; // milk multiplier for golden cow clicks
+  var PET_TICK_MS = 500; // ms between petting ticks
+  var PET_SESSION_MS = 2500; // how long the Pet button's session lasts
+  var PET_COOLDOWN_MS = 5000; // rest before Gwendolyn wants petting again
 
   var state = freshState();
 
@@ -49,6 +55,18 @@
       nextIdleMooAt: Date.now() + 15000,
       nextBirdAt: Date.now() + 9000,
       nextButterflyAt: Date.now() + 4000,
+      // Rhythm milking: a beat rings around Gwendolyn; clicks on it pay double.
+      nextBeatAt: 0,
+      // Golden cow: a rare visitor worth 10x milk per click.
+      golden: null, // { x, y, w, h, until }
+      nextGoldenAt: Date.now() + 60000,
+      // Petting: hold Gwendolyn (or the Pet button) to calm the herd.
+      petting: false,
+      petUntil: 0,
+      petAccumulator: 0,
+      petCooldownUntil: 0,
+      petHoldStart: 0,
+      ignoreNextClick: false,
       floaters: [], // floating "+N Milk" texts
       particles: [], // milk, hearts, puffs, stars, rings, confetti, rain, drops
       butterflies: [],
@@ -163,6 +181,34 @@
   function soundMunch() { noiseBurst(0.07, 700, 0.07); noiseBurst(0.07, 500, 0.07, 0.12); noiseBurst(0.09, 600, 0.06, 0.24); }
   function soundThud() { tone(120, 45, 0.18, "sine", 0.12); noiseBurst(0.1, 300, 0.06); }
   function soundBuzz() { tone(140, 70, 0.25, "sawtooth", 0.05); }
+  function soundPurr() {
+    // A soft, contented rumble while Gwendolyn is being petted.
+    var ac = ensureAudio();
+    if (!ac) { return; }
+    try {
+      var t0 = ac.currentTime;
+      var osc = ac.createOscillator();
+      var gain = ac.createGain();
+      var lfo = ac.createOscillator();
+      var lfoGain = ac.createGain();
+      osc.type = "triangle";
+      osc.frequency.value = 85;
+      lfo.type = "sine";
+      lfo.frequency.value = 9;
+      lfoGain.gain.value = 18;
+      lfo.connect(lfoGain);
+      lfoGain.connect(osc.frequency);
+      gain.gain.setValueAtTime(0.05, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.45);
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.start(t0);
+      osc.stop(t0 + 0.5);
+      lfo.start(t0);
+      lfo.stop(t0 + 0.5);
+    } catch (e) { /* ignore */ }
+  }
+  function soundGolden() { tone(1319, 1319, 0.1, "sine", 0.07); tone(1568, 1568, 0.1, "sine", 0.07, 0.09); tone(2093, 2093, 0.22, "sine", 0.07, 0.18); }
 
   function soundMoo() {
     // A proper moo: two detuned voices sliding down through a lowpass
@@ -502,11 +548,14 @@
     ctx.stroke();
   }
 
-  function drawProceduralCow(x, y, w, h, withBow, t, grazing) {
+  function drawProceduralCow(x, y, w, h, withBow, t, grazing, gold) {
     var s = w / 200; // scale relative to the 200 x 150 drawing
     var blink = Date.now() < state.blinkUntil;
     var chew = Math.sin(t * 0.004) * 2;
     var grazeDrop = grazing ? 26 : 0;
+    var bodyColor = gold ? "#ffd25e" : "#f5f5f5";
+    var spotColor = gold ? "#c98f1b" : "#222";
+    var legColor = gold ? "#ffe9a8" : "#e8e8e8";
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(s, s);
@@ -518,7 +567,7 @@
     ctx.fill();
 
     // Legs with shading.
-    ctx.fillStyle = "#e8e8e8";
+    ctx.fillStyle = legColor;
     ctx.fillRect(30, 105, 16, 35);
     ctx.fillRect(70, 105, 16, 35);
     ctx.fillRect(125, 105, 16, 35);
@@ -531,7 +580,7 @@
 
     // Tail, swishing.
     var tailSway = Math.sin(t * 0.003) * 8;
-    ctx.strokeStyle = "#f5f5f5";
+    ctx.strokeStyle = bodyColor;
     ctx.lineWidth = 6;
     ctx.beginPath();
     ctx.moveTo(12, 45);
@@ -543,7 +592,7 @@
     ctx.fill();
 
     // Body with a soft belly shade.
-    ctx.fillStyle = "#f5f5f5";
+    ctx.fillStyle = bodyColor;
     ctx.beginPath();
     ctx.ellipse(100, 75, 92, 52, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -553,7 +602,7 @@
     ctx.fill();
 
     // Spots.
-    ctx.fillStyle = "#222";
+    ctx.fillStyle = spotColor;
     ctx.beginPath();
     ctx.ellipse(70, 60, 22, 15, 0.4, 0, Math.PI * 2);
     ctx.fill();
@@ -580,11 +629,11 @@
     ctx.rotate(grazing ? 0.18 : 0);
 
     // Head.
-    ctx.fillStyle = "#f5f5f5";
+    ctx.fillStyle = bodyColor;
     ctx.beginPath();
     ctx.ellipse(188, 45, 30, 34, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = "#222";
+    ctx.fillStyle = spotColor;
     ctx.beginPath();
     ctx.ellipse(172, 26, 9, 6, -0.4, 0, Math.PI * 2);
     ctx.fill();
@@ -606,7 +655,7 @@
 
     // Ears (right ear flicks now and then).
     var flick = (Math.sin(t * 0.0013) > 0.96) ? -6 : 0;
-    ctx.fillStyle = "#f5f5f5";
+    ctx.fillStyle = bodyColor;
     ctx.beginPath();
     ctx.ellipse(160, 38, 12, 7, -0.5, 0, Math.PI * 2);
     ctx.fill();
@@ -685,7 +734,7 @@
     ctx.restore();
   }
 
-  function drawCow(x, y, w, h, withBow, flip, t, grazing) {
+  function drawCow(x, y, w, h, withBow, flip, t, grazing, gold) {
     // Squash-and-stretch right after a click, idle bob otherwise.
     // A happy cow bounces a little higher; a sad one barely moves.
     var now = Date.now();
@@ -706,26 +755,26 @@
     if (flip) {
       ctx.translate(x + w, drawY);
       ctx.scale(-1, squash);
-      if (cowImageReady) {
+      if (cowImageReady && !gold) {
         ctx.drawImage(cowImage, 0, 0, w, h);
       } else {
-        drawProceduralCow(0, 0, w, h, withBow, t, grazing);
+        drawProceduralCow(0, 0, w, h, withBow, t, grazing, gold);
       }
     } else {
       ctx.translate(x, drawY);
       ctx.scale(1, squash);
-      if (grazing && cowImageReady) {
+      if (grazing && cowImageReady && !gold) {
         // The sprite can't lower its head, so it dips and tilts to graze.
         ctx.translate(w / 2, h);
         ctx.rotate(0.1);
         ctx.translate(-w / 2, -h + 10);
       }
-      if (cowImageReady) {
+      if (cowImageReady && !gold) {
         ctx.drawImage(cowImage, 0, 0, w, h);
       } else {
-        drawProceduralCow(0, 0, w, h, withBow, t, grazing);
+        drawProceduralCow(0, 0, w, h, withBow, t, grazing, gold);
       }
-      if (withBow && cowImageReady) {
+      if (withBow && cowImageReady && !gold) {
         // Bow on the sprite cow, near the head (top right of the image).
         ctx.fillStyle = "#c0392b";
         var bx = w * 0.86, by = h * 0.08;
@@ -877,6 +926,41 @@
       drawCow(hx, hy, 120, 90, false, i % 2 === 0, t + i * 700, false);
     }
 
+    // The golden cow, when she visits: worth 10x milk per click.
+    if (state.golden) {
+      var gz = state.golden;
+      var glow = 0.5 + 0.4 * Math.sin(t * 0.006);
+      ctx.strokeStyle = "rgba(255, 210, 94, " + glow + ")";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.ellipse(gz.x + gz.w / 2, gz.y + gz.h / 2, gz.w / 2 + 12, gz.h / 2 + 12, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      drawCow(gz.x, gz.y, gz.w, gz.h, false, false, t, false, true);
+      ctx.fillStyle = "#b8860b";
+      ctx.font = "bold 15px Georgia, serif";
+      ctx.textAlign = "center";
+      ctx.fillText("★ GOLDEN COW ★", gz.x + gz.w / 2, gz.y - 8);
+    }
+
+    // Rhythm beat: a ring pulses around Gwendolyn. Click on the beat for x2.
+    if (state.started && !state.paused && !state.gameOver && state.nextBeatAt > 0) {
+      var beatProgress = 1 - (state.nextBeatAt - Date.now()) / BEAT_PERIOD;
+      if (beatProgress < 0) { beatProgress = 0; }
+      if (beatProgress > 1) { beatProgress = 1; }
+      var ringR = 118 + beatProgress * 42;
+      ctx.strokeStyle = "rgba(255, 210, 94, " + (0.9 * (1 - beatProgress) + 0.1) + ")";
+      ctx.lineWidth = beatProgress < 0.15 ? 6 : 3;
+      ctx.beginPath();
+      ctx.ellipse(360 + shakeX, 170 + shakeY, ringR, ringR * 0.72, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      if (beatProgress < 0.15) {
+        ctx.fillStyle = "rgba(255, 210, 94, 0.9)";
+        ctx.font = "bold 16px Georgia, serif";
+        ctx.textAlign = "center";
+        ctx.fillText("♪", 360 + shakeX, 60 + shakeY);
+      }
+    }
+
     drawParticles(dt);
     drawBubble();
 
@@ -945,6 +1029,20 @@
     el("buyMilker").disabled = state.milk < milkerCost();
     el("buyCow").disabled = state.cows >= 8 || state.milk < cowCost();
     el("feedHerd").disabled = state.milk < feedCost();
+    var petBtn = el("petButton");
+    if (petBtn) {
+      var now = Date.now();
+      if (state.petting) {
+        petBtn.textContent = "🤲 Petting Gwendolyn…";
+        petBtn.disabled = true;
+      } else if (now < state.petCooldownUntil) {
+        petBtn.textContent = "🤲 Gwendolyn is resting…";
+        petBtn.disabled = true;
+      } else {
+        petBtn.textContent = "🤲 Pet Gwendolyn (+Rating, calms the herd)";
+        petBtn.disabled = !state.started || state.gameOver;
+      }
+    }
     el("pauseButton").textContent = state.paused ? "▶ Resume" : "⏸ Pause";
     el("muteButton").textContent = state.muted ? "🔇 Muted" : "🔊 Sound on";
     var slider = el("volumeSlider");
@@ -954,6 +1052,9 @@
   // --- Clicking ----------------------------------------------------------------
   function cowHitZones() {
     var zones = [{ x: 260, y: 95, w: 200, h: 150 }];
+    if (state.golden) {
+      zones.push({ x: state.golden.x, y: state.golden.y, w: state.golden.w, h: state.golden.h, golden: true });
+    }
     for (var i = 1; i < state.cows; i++) {
       zones.push({
         x: 60 + ((i - 1) % 4) * 160,
@@ -964,8 +1065,16 @@
     return zones;
   }
 
+  function isOnBeat(now) {
+    if (state.nextBeatAt <= 0) { return false; }
+    var lastBeat = state.nextBeatAt - BEAT_PERIOD;
+    return Math.min(Math.abs(now - lastBeat), Math.abs(now - state.nextBeatAt)) <= BEAT_WINDOW;
+  }
+
   function milkAt(clientX, clientY) {
     if (!state.started || state.paused || state.gameOver || state.eventActive) { return; }
+    // A click that ends a petting hold is the pet, not a milking click.
+    if (state.ignoreNextClick) { state.ignoreNextClick = false; return; }
     var rect = canvas.getBoundingClientRect();
     var scaleX = canvas.width / rect.width;
     var scaleY = canvas.height / rect.height;
@@ -1011,16 +1120,35 @@
     }
 
     var gained = milkPerClick();
+    var onBeat = false;
+    if (hit.golden) {
+      gained *= GOLDEN_MULT;
+    } else if (isOnBeat(now)) {
+      // Rhythm milking: clicking on the beat pays double.
+      gained *= 2;
+      onBeat = true;
+    }
     state.milk += gained;
     state.totalMilk += gained;
-    state.floaters.push({ x: hit.x + hit.w / 2, y: hit.y + 10, text: "+" + gained + " Milk", life: 1 });
+    var floaterText = "+" + gained + " Milk" + (hit.golden ? " ★" : onBeat ? " ♪" : "");
+    state.floaters.push({ x: hit.x + hit.w / 2, y: hit.y + 10, text: floaterText, life: 1 });
     spawnParticles(hit.x + hit.w / 2, hit.y + hit.h - 10, "milk", 6);
     spawnRing(x, y);
     // Milk streams from the udder into the bucket on main-cow clicks.
     if (hit.x === 260) { spawnStream(365, 225); }
+    if (hit.golden) {
+      spawnParticles(hit.x + hit.w / 2, hit.y + hit.h / 2, "star", 12);
+      soundGolden();
+      log("Golden cow! " + gained + " Milk from one lucky click.");
+    } else if (onBeat) {
+      spawnParticles(hit.x + hit.w / 2, hit.y + hit.h / 2, "star", 6);
+      tone(780, 1100, 0.1, "sine", 0.06);
+      state.floaters.push({ x: hit.x + hit.w / 2, y: hit.y - 12, text: "On the beat! x2", life: 1 });
+    } else {
+      soundPop();
+      soundSquirt();
+    }
     state.squashUntil = now + 150;
-    soundPop();
-    soundSquirt();
     if (state.streak > 0 && state.streak % 25 === 0) {
       log(state.streak + " calm clicks in a row. Gwendolyn approves of this pace.");
       state.bubble = { text: "Moo-velous pace!", until: now + 1800 };
@@ -1038,6 +1166,28 @@
       milkAt(event.touches[0].clientX, event.touches[0].clientY);
     }
   }, { passive: false });
+
+  // Hold-to-pet: press and hold Gwendolyn for a moment to start petting her.
+  canvas.addEventListener("pointerdown", function (event) {
+    if (!state.started || state.paused || state.gameOver) { return; }
+    var rect = canvas.getBoundingClientRect();
+    var x = (event.clientX - rect.left) * (canvas.width / rect.width);
+    var y = (event.clientY - rect.top) * (canvas.height / rect.height);
+    if (x >= 260 && x <= 460 && y >= 95 && y <= 245) {
+      state.petHoldStart = Date.now();
+    }
+  });
+  function endPetHold() {
+    if (state.petting) {
+      state.petting = false;
+      state.ignoreNextClick = true;
+      state.petCooldownUntil = Date.now() + PET_COOLDOWN_MS;
+      updateStats();
+    }
+    state.petHoldStart = 0;
+  }
+  canvas.addEventListener("pointerup", endPetHold);
+  canvas.addEventListener("pointerleave", endPetHold);
 
   // Keyboard: Space milks the main cow, P / Escape pauses.
   document.addEventListener("keydown", function (event) {
@@ -1063,6 +1213,8 @@
   el("playButton").addEventListener("click", function () {
     el("startBox").classList.remove("show");
     state.started = true;
+    state.nextBeatAt = Date.now() + BEAT_PERIOD;
+    state.nextGoldenAt = Date.now() + 60000;
     ensureAudio();
     soundMoo();
     state.bubble = { text: "Moo!", until: Date.now() + 1600 };
@@ -1121,6 +1273,16 @@
     setTimeout(soundHappy, 350);
     log("You fed the herd. Moo Rating rises, and Gwendolyn softens a little.");
     showMessage("The herd munches happily. Moo Rating up!");
+    updateStats();
+  });
+
+  el("petButton").addEventListener("click", function () {
+    if (!state.started || state.gameOver || state.petting || Date.now() < state.petCooldownUntil) { return; }
+    state.petUntil = Date.now() + PET_SESSION_MS;
+    state.petting = true;
+    soundPurr();
+    state.bubble = { text: "Moo~", until: Date.now() + 2000 };
+    log("You scratch behind Gwendolyn's ears. She leans into it.");
     updateStats();
   });
 
@@ -1259,6 +1421,50 @@
     if (now >= state.nextBlinkAt) {
       state.blinkUntil = now + 140;
       state.nextBlinkAt = now + 2200 + Math.random() * 2500;
+    }
+
+    // Rhythm beat: keep the beat clock running while the game is live.
+    if (state.started && !state.paused && !state.gameOver && state.nextBeatAt > 0) {
+      while (state.nextBeatAt <= now) { state.nextBeatAt += BEAT_PERIOD; }
+    }
+
+    // Petting: every half-second of petting calms the herd a little.
+    var wantPet = (state.petHoldStart > 0 && now - state.petHoldStart > 350) || now < state.petUntil;
+    if (state.started && !state.paused && !state.gameOver && wantPet) {
+      state.petting = true;
+      state.petAccumulator += rawDt * 1000;
+      while (state.petAccumulator >= PET_TICK_MS) {
+        state.petAccumulator -= PET_TICK_MS;
+        changeRating(1);
+        state.herdMemory = Math.max(0, state.herdMemory - 1);
+        spawnParticles(360, 130, "heart", 2);
+        soundPurr();
+      }
+    } else if (state.petting && state.petHoldStart === 0) {
+      // A Pet button session just ended; Gwendolyn needs a rest.
+      if (state.petUntil > 0 && now >= state.petUntil) {
+        state.petCooldownUntil = now + PET_COOLDOWN_MS;
+        updateStats();
+      }
+      state.petting = false;
+    }
+
+    // Golden cow visits.
+    if (state.started && !state.paused && !state.gameOver) {
+      if (state.golden && now >= state.golden.until) {
+        state.golden = null;
+        updateStats();
+      } else if (!state.golden && now >= state.nextGoldenAt) {
+        state.golden = { x: 530, y: 290, w: 110, h: 82, until: now + 10000 };
+        state.nextGoldenAt = now + 90000 + Math.random() * 60000;
+        state.bubble = { text: "A golden cow!", until: now + 2000 };
+        soundGolden();
+        log("A golden cow wandered into the field! Her milk is worth 10x — for 10 seconds.");
+        updateStats();
+      }
+      if (state.golden && Math.random() < dt / 0.4) {
+        spawnParticles(state.golden.x + Math.random() * state.golden.w, state.golden.y + Math.random() * 20, "star", 1);
+      }
     }
 
     // Grazing: now and then Gwendolyn puts her head down to eat.
