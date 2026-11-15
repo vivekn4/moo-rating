@@ -1,11 +1,16 @@
 # Moo Rating
 
+**[▶ Play Moo Rating](https://vivekn4.github.io/moo-rating/)**
+
 A cow clicker about milking a herd until it revolts. Click a cow to make Milk. Click too fast and the herd stresses, the Moo Rating drops, and the cows remember. Every 45 seconds a herd event forces a choice: appease, ignore, or exploit. Reach 5,000 total Milk to see how your farm ends up.
+
+![Gwendolyn, the cow](assets/sprites/cow.png)
 
 ## How to play
 
-- **Click a cow** to milk it. Each click earns Milk based on your milker level and herd size.
+- **Click a cow** (or press Space) to milk it. Each click earns Milk based on your milker level and herd size.
 - **Clicking faster than 4 times a second** stresses the herd: the Moo Rating drops, the cows shake, and a memory counter builds up. A stressed herd gives less Milk per click. Slow down, or feed the herd to make them forget.
+- **Keep a steady streak** — calm, even clicking builds your streak. Gwendolyn approves.
 - **Buy upgrades** with Milk:
   - **Better Milker** — more Milk per click.
   - **Add a Cow** — a bigger herd (up to 8 cows). Cows also produce a trickle of Milk on their own.
@@ -15,6 +20,7 @@ A cow clicker about milking a herd until it revolts. Click a cow to make Milk. C
   - **Ignore** — lowers the Moo Rating and angers Gwendolyn, the recurring cow with the red bow.
   - **Exploit** — gains 100 Milk and lowers the Moo Rating.
 - If the Moo Rating hits 0, the herd revolts and refuses to be milked until you feed them.
+- **Pause** with the Pause button or the P key. **Mute** the sound with the Sound button.
 
 ## Endings
 
@@ -26,15 +32,13 @@ At **5,000 total Milk** the game ends. Which ending you get depends on the Moo R
 
 ## How to run
 
-Just open `index.html` in a browser, or serve the folder and open it:
+Play it in your browser at **[vivekn4.github.io/moo-rating](https://vivekn4.github.io/moo-rating/)**, or run it locally:
 
 ```bash
 python3 -m http.server
 ```
 
-Then open `http://localhost:8000` in your browser.
-
-No build step, no dependencies. The game is plain HTML, CSS, and JavaScript with a canvas.
+Then open `http://localhost:8000` in your browser. No build step, no dependencies — plain HTML, CSS, and JavaScript with a canvas. Sounds are synthesized in the browser with the Web Audio API, so there are no audio files to download.
 
 ## Art and assets
 
