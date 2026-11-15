@@ -33,13 +33,27 @@
   }
   h1 { margin: 0 0 4px; text-align: center; font-size: 34px; color: #4a2c14; letter-spacing: 1px; }
   .subtitle { text-align: center; margin: 0 0 12px; font-style: italic; color: #6b5b3e; }
-  #topBar { display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; }
+  #topBar { display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
   #topBar button {
     font-family: inherit; font-size: 14px; padding: 6px 12px;
     border: 2px solid #6b4226; border-radius: 8px;
     background: #fff8dc; color: #4a2c14; cursor: pointer;
   }
   #topBar button:hover { background: #ffdf8e; }
+  #topBar button:active, #shop button:active { transform: scale(0.95); }
+  #volumeWrap { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #4a2c14; }
+  #volumeSlider { width: 110px; accent-color: #4a2c14; cursor: pointer; }
+  #milestoneBanner {
+    display: none; text-align: center; font-size: 19px; font-weight: bold; color: #4a2c14;
+    background: linear-gradient(90deg, #ffe082, #ffd25e, #ffe082);
+    border: 2px solid #b8860b; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px;
+  }
+  #milestoneBanner.show { display: block; animation: bannerPop 0.45s ease-out; }
+  @keyframes bannerPop {
+    0% { transform: scale(0.7); opacity: 0; }
+    60% { transform: scale(1.06); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
   #progressWrap { margin-bottom: 10px; }
   #progressLabel { display: flex; justify-content: space-between; font-size: 13px; color: #6b5b3e; margin-bottom: 3px; }
   #progressOuter { height: 14px; background: #e0d5b8; border: 1px solid #6b4226; border-radius: 7px; overflow: hidden; }
@@ -103,7 +117,10 @@
   <div id="topBar">
     <button id="pauseButton" aria-label="Pause the game">⏸ Pause</button>
     <button id="muteButton" aria-label="Mute sound">🔊 Sound on</button>
+    <span id="volumeWrap">🔈 <input type="range" id="volumeSlider" min="0" max="100" value="70" aria-label="Volume"> 🔊</span>
   </div>
+
+  <div id="milestoneBanner" aria-live="polite"></div>
 
   <div id="progressWrap">
     <div id="progressLabel"><span>Season progress — 5,000 Milk to finish</span><span id="progressText">0 / 5,000</span></div>

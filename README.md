@@ -8,9 +8,11 @@ A cow clicker about milking a herd until it revolts. Click a cow to make Milk. C
 
 ## How to play
 
-- **Click a cow** (or press Space) to milk it. Each click earns Milk based on your milker level and herd size.
+- **Click a cow** (or press Space) to milk it. Each click earns Milk based on your milker level and herd size. Watch the milk stream arc into the bucket — the bucket fills with the Milk on hand.
 - **Clicking faster than 4 times a second** stresses the herd: the Moo Rating drops, the cows shake, and a memory counter builds up. A stressed herd gives less Milk per click. Slow down, or feed the herd to make them forget.
 - **Keep a steady streak** — calm, even clicking builds your streak. Gwendolyn approves.
+- **The farm is alive:** Gwendolyn grazes, blinks, and moos to herself, butterflies drift by, birds cross the sky, and the day warms toward sunset as you near 5,000 Milk.
+- **Milestones** pop up every 1,000 total Milk, with a golden burst and a fanfare.
 - **Buy upgrades** with Milk:
   - **Better Milker** — more Milk per click.
   - **Add a Cow** — a bigger herd (up to 8 cows). Cows also produce a trickle of Milk on their own.
@@ -20,7 +22,7 @@ A cow clicker about milking a herd until it revolts. Click a cow to make Milk. C
   - **Ignore** — lowers the Moo Rating and angers Gwendolyn, the recurring cow with the red bow.
   - **Exploit** — gains 100 Milk and lowers the Moo Rating.
 - If the Moo Rating hits 0, the herd revolts and refuses to be milked until you feed them.
-- **Pause** with the Pause button or the P key. **Mute** the sound with the Sound button.
+- **Pause** with the Pause button or the P key. **Mute** the sound with the Sound button, or set the volume with the slider. All sounds are synthesized in the browser — moos, milk squirts, coin dings, munching, event stings, and ending fanfares — so there are no audio files to download.
 
 ## Endings
 
@@ -38,7 +40,7 @@ Play it in your browser at **[vivekn4.github.io/moo-rating](https://vivekn4.gith
 python3 -m http.server
 ```
 
-Then open `http://localhost:8000` in your browser. No build step, no dependencies — plain HTML, CSS, and JavaScript with a canvas. Sounds are synthesized in the browser with the Web Audio API, so there are no audio files to download.
+Then open `http://localhost:8000` in your browser. No build step, no dependencies — plain HTML, CSS, and JavaScript with a canvas.
 
 ## Art and assets
 
