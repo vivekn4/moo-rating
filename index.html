@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moo Rating</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Georgia, "Times New Roman", serif;
+    background: #2e5d34;
+    color: #2b2118;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+  }
+  #game {
+    width: 760px;
+    max-width: 96vw;
+    background: #fdf6e3;
+    border: 4px solid #6b4226;
+    border-radius: 12px;
+    padding: 16px 20px 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+  h1 { margin: 0 0 4px; text-align: center; font-size: 34px; color: #4a2c14; }
+  .subtitle { text-align: center; margin: 0 0 12px; font-style: italic; color: #6b5b3e; }
+  #stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    justify-content: center;
+    background: #fff8dc;
+    border: 2px solid #d9c48a;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    font-size: 16px;
+  }
+  #stats b { color: #4a2c14; }
+  #ratingBarWrap { display: flex; align-items: center; gap: 6px; }
+  #ratingBarOuter {
+    width: 130px; height: 14px;
+    background: #e0d5b8; border: 1px solid #6b4226; border-radius: 7px;
+    overflow: hidden;
+  }
+  #ratingBarInner { height: 100%; width: 60%; background: #4caf50; transition: width 0.3s, background 0.3s; }
+  canvas {
+    display: block;
+    margin: 0 auto;
+    background: linear-gradient(#87ceeb 0%, #a8d8a8 45%, #6faf5e 45%, #5a9e4b 100%);
+    border: 3px solid #6b4226;
+    border-radius: 10px;
+    cursor: pointer;
+    image-rendering: pixelated;
+  }
+  #message {
+    min-height: 24px;
+    text-align: center;
+    font-weight: bold;
+    color: #8b0000;
+    margin: 8px 0;
+  }
+  #shop { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 6px 0 12px; }
+  #shop button, #eventBox button, #endingBox button {
+    font-family: inherit;
+    font-size: 15px;
+    padding: 9px 14px;
+    border: 2px solid #6b4226;
+    border-radius: 8px;
+    background: #ffdf8e;
+    color: #4a2c14;
+    cursor: pointer;
+  }
+  #shop button:hover:not(:disabled), #eventBox button:hover:not(:disabled), #endingBox button:hover:not(:disabled) { background: #ffd25e; }
+  #shop button:disabled, #eventBox button:disabled { opacity: 0.45; cursor: not-allowed; }
+  #log {
+    background: #fff;
+    border: 1px solid #d9c48a;
+    border-radius: 8px;
+    height: 96px;
+    overflow-y: auto;
+    padding: 8px 12px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  #log p { margin: 0 0 4px; }
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+  }
+  .overlay.show { display: flex; }
+  .overlayCard {
+    background: #fdf6e3;
+    border: 4px solid #6b4226;
+    border-radius: 12px;
+    padding: 22px 26px;
+    max-width: 520px;
+    text-align: center;
+  }
+  .overlayCard h2 { margin-top: 0; color: #4a2c14; }
+  .overlayCard .choices { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+  .small { text-align: center; font-size: 13px; color: #6b5b3e; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div id="game">
+  <h1>Moo Rating</h1>
+  <p class="subtitle">Milk the herd. Mind the mood. Gwendolyn is watching.</p>
+
+  <div id="stats">
+    <span>Milk: <b id="milk">0</b></span>
+    <span>Total Milk: <b id="totalMilk">0</b> / 5000</span>
+    <span id="ratingBarWrap">Moo Rating: <span id="ratingBarOuter"><span id="ratingBarInner"></span></span> <b id="rating">60</b></span>
+    <span>Cows: <b id="cows">1</b></span>
+    <span>Milker: <b id="milker">Lv 1</b></span>
+    <span>Gwendolyn: <b id="gwendolyn">Calm</b></span>
+    <span>Next herd event: <b id="eventTimer">45s</b></span>
+  </div>
+
+  <canvas id="gameCanvas" width="720" height="420"></canvas>
+  <div id="message"></div>
+
+  <div id="shop">
+    <button id="buyMilker">Better Milker — 100 Milk</button>
+    <button id="buyCow">Add a Cow — 150 Milk</button>
+    <button id="feedHerd">Feed the Herd — 40 Milk</button>
+  </div>
+
+  <div id="log"></div>
+  <p class="small">Click a cow to milk it. Clicking faster than 4 times a second stresses the herd and lowers the Moo Rating — and the cows remember. Reach 5,000 total Milk to see how your farm ends up.</p>
+</div>
+
+<div class="overlay" id="eventBox">
+  <div class="overlayCard">
+    <h2 id="eventTitle">Herd Event</h2>
+    <p id="eventText"></p>
+    <div class="choices">
+      <button id="eventAppease">Appease the herd — costs 50 Milk</button>
+      <button id="eventIgnore">Ignore them</button>
+      <button id="eventExploit">Exploit the moment — gain 100 Milk</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="endingBox">
+  <div class="overlayCard">
+    <h2 id="endingTitle"></h2>
+    <p id="endingText"></p>
+    <p id="endingStats"></p>
+    <button id="playAgain">Play Again</button>
+  </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
